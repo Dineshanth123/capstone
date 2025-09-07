@@ -1,16 +1,14 @@
-const express = require("express");
-const connectDB = require("./config/db");
-require("dotenv").config();
+// server.js - UPDATED VERSION
+require('dotenv').config();
+const app = require('./app'); // ← IMPORT FROM app.js
+const connectDB = require('./config/db');
 
-const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Connect to database
 connectDB();
 
-app.get("/", (req, res) => {
-  res.send("✅ Server is running & MongoDB is connected (check console)");
-});
-
+// Use the app from app.js (which has all your routes)
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
