@@ -1,92 +1,93 @@
-// Extract phone numbers
-const extractPhones = (text) => {
-  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+// src/services/extractor.js
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// --- Helper: clean JSON text ---
+function cleanJsonResponse(text) {
+  if (!text) return "{}";
+  return text.replace(/```json/gi, "").replace(/```/g, "").trim();
+}
+
+// --- Regex fallback extractors ---
+function regexFallback(text) {
+  const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\d{10}/g;
+  const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+  const nameRegex = /\bI am ([A-Z][a-z]+\s[A-Z][a-z]+)\b/;
+  const locationRegex = /\b(Victoria Station|Chennai|Mumbai|Delhi)\b/gi;
+
+  const names = nameRegex.test(text) ? [text.match(nameRegex)[1]] : [];
   const phones = text.match(phoneRegex) || [];
-  return phones.map(phone => phone.replace(/\D/g, ''));
-};
+  const emails = text.match(emailRegex) || [];
+  const locations = (text.match(locationRegex) || []).map(l => ({ name: l }));
 
-// Extract email addresses
-const extractEmails = (text) => {
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  return text.match(emailRegex) || [];
-};
+  let helpType = "Other";
+  if (/food|water/i.test(text)) helpType = "Food";
+  if (/medical|doctor|hospital/i.test(text)) helpType = "Medical";
+  if (/rescue|trapped|help/i.test(text)) helpType = "Rescue";
 
-// Extract names (simple pattern matching)
-const extractNames = (text) => {
-  const namePatterns = [
-    /contact\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/gi,
-    /name\s*[:=]\s*([A-Z][a-z]+)/gi,
-    /(?:call|phone|text)\s+([A-Z][a-z]+)/gi
-  ];
-  
-  const names = new Set();
-  namePatterns.forEach(pattern => {
-    let match;
-    while ((match = pattern.exec(text)) !== null) {
-      if (match[1] && match[1].length > 2) {
-        names.add(match[1]);
-      }
-    }
-  });
-  
-  return Array.from(names);
-};
-
-// Extract locations - return objects, not strings
-const extractLocations = (text) => {
-  const locationKeywords = [
-    'street', 'st', 'avenue', 'ave', 'road', 'rd', 'boulevard', 'blvd',
-    'lane', 'ln', 'drive', 'dr', 'court', 'ct', 'highway', 'hwy'
-  ];
-  
-  const locations = [];
-  const words = text.split(' ');
-  
-  for (let i = 0; i < words.length - 1; i++) {
-    if (locationKeywords.includes(words[i].toLowerCase()) || /\d+/.test(words[i])) {
-      const locationName = words.slice(Math.max(0, i - 2), i + 3).join(' ');
-      locations.push({
-        name: locationName,
-        coordinates: {}
-      });
-    }
-  }
-  
-  return locations.slice(0, 3);
-};
-
-// Extract help type - use exact enum values from your schema
-const extractHelpType = (text) => {
-  const helpCategories = {
-    Rescue: ['rescue', 'trapped', 'stuck', 'evacuate', 'save', 'emergency', 'urgent'],
-    Medical: ['medical', 'doctor', 'hospital', 'medicine', 'injured', 'hurt', 'bleeding'],
-    Food: ['food', 'hungry', 'starving', 'eat', 'meal', 'water', 'thirsty'],
-    Shelter: ['shelter', 'home', 'house', 'roof', 'warm', 'cold', 'sleep'],
-    Evacuation: ['evacuate', 'evacuation', 'leave', 'exit'],
-    Information: ['information', 'info', 'news', 'update'],
-    Other: []
+  return {
+    classification: {
+      isHelpRequest: false,
+      urgency: "Needs Review",
+      confidence: 0,
+      categories: []
+    },
+    names,
+    contacts: { phones, emails },
+    locations,
+    helpType,
+    timestamps: [{ eventType: "processed", eventTime: new Date() }],
+    quantities: [],
+    rawNlpResponse: null
   };
-  
-  const lowerText = text.toLowerCase();
-  let maxMatches = 0;
-  let detectedType = 'Other';
-  
-  Object.entries(helpCategories).forEach(([type, keywords]) => {
-    const matches = keywords.filter(keyword => lowerText.includes(keyword)).length;
-    if (matches > maxMatches) {
-      maxMatches = matches;
-      detectedType = type;
-    }
-  });
-  
-  return detectedType;
-};
+}
 
-// ✅ MAKE SURE THIS EXPORT EXISTS:
+// --- Main Extractor with Gemini ---
+async function extractDetails(text) {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+      Extract structured information from the following disaster-related message.
+      Return valid JSON ONLY with this structure:
+      {
+        "classification": {
+          "isHelpRequest": true/false,
+          "urgency": "High" | "Medium" | "Low" | "Needs Review",
+          "confidence": number (0 to 1),
+          "categories": [ "Medical", "Food", "Shelter", "Rescue", "Other" ]
+        },
+        "names": [string],
+        "contacts": {
+          "phones": [string],
+          "emails": [string]
+        },
+        "locations": [ { "name": string } ],
+        "helpType": "Medical" | "Food" | "Rescue" | "Shelter" | "Other"
+      }
+
+      Message: """${text}"""
+    `;
+
+    const result = await model.generateContent(prompt);
+    const raw = result.response.candidates[0].content.parts[0].text;
+    const cleaned = cleanJsonResponse(raw);
+
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      ...parsed,
+      timestamps: [{ eventType: "processed", eventTime: new Date() }],
+      quantities: [],
+      rawNlpResponse: cleaned
+    };
+  } catch (err) {
+    console.error("Gemini Extractor Error:", err.message);
+    return regexFallback(text);
+  }
+}
+
 module.exports = {
-  extractPhones,
-  extractEmails,
-  extractNames,
-  extractLocations,
-  extractHelpType
+  extractDetails
 };

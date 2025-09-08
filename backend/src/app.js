@@ -1,30 +1,31 @@
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
+// app.js - CLEANED VERSION
+const express = require("express");
+const cors = require("cors");
 
 // Import routes
-const postRoutes = require('./routes/posts');
+const postRoutes = require("./routes/posts");
 
 const app = express();
 
-// Middleware
+// ================== Middleware ==================
 app.use(cors());
 app.use(express.json());
 
-// Mount the posts routes
-app.use('/api/posts', postRoutes);
+// ================== Routes ==================
+app.use("/api/posts", postRoutes);
 
-// Basic health check endpoint
-app.get('/', (req, res) => {
-  res.json({ message: 'Disaster Response API is working!' });
+// Health check endpoint
+app.get("/", (req, res) => {
+  res.json({
+    message: "🌍 Disaster Response API is working!",
+    aiProvider: "Gemini", // explicitly show AI provider
+  });
 });
 
-
-
-// Error handling middleware
+// ================== Error Handling ==================
 app.use((error, req, res, next) => {
-  console.error('Server error:', error);
-  res.status(500).json({ message: 'Server error', error: error.message });
+  console.error("Server error:", error);
+  res.status(500).json({ message: "Server error", error: error.message });
 });
 
 module.exports = app;
