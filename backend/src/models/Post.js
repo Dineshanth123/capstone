@@ -133,36 +133,36 @@ PostSchema.index({ 'source.platform': 1 });
 PostSchema.index({ 'rawText': 'text', 'processedText': 'text' });
 
 // ====================== Virtuals ======================
-PostSchema.virtual('isHighPriority').get(function () {
+PostSchema.virtual('isHighPriority').get(function() {
   return this.classification.urgency === 'High' && this.classification.isHelpRequest;
 });
 
 // ====================== Middleware ======================
-PostSchema.pre('save', function (next) {
+PostSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   this.version += 1;
   next();
 });
 
 // ====================== Static Methods ======================
-PostSchema.statics.findHighPriority = function () {
+PostSchema.statics.findHighPriority = function() {
   return this.find({
     'classification.isHelpRequest': true,
     'classification.urgency': 'High'
   });
 };
 
-PostSchema.statics.findByStatus = function (status) {
+PostSchema.statics.findByStatus = function(status) {
   return this.find({ processingStatus: status });
 };
 
 // ====================== Instance Methods ======================
-PostSchema.methods.markAsProcessed = function () {
+PostSchema.methods.markAsProcessed = function() {
   this.processingStatus = 'Completed';
   return this.save();
 };
 
-PostSchema.methods.addProcessingError = function (stage, message) {
+PostSchema.methods.addProcessingError = function(stage, message) {
   this.processingErrors.push({ stage, message });
   this.processingStatus = 'Failed';
   return this.save();

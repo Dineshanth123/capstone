@@ -4,13 +4,13 @@ const {
   createPost,
   processPost,
   getUrgentPosts,
-  getStats
+  getStats,
+  fetchTwitterPosts
 } = require('../controllers/postController');
 
 const router = express.Router();
 
-// GET /api/posts - Get all posts with filtering
-// GET /api/posts?urgency=High&helpType=Medical&page=1&limit=10
+// GET /api/posts - Get all posts
 router.get('/', getPosts);
 
 // POST /api/posts - Create a new post
@@ -24,5 +24,8 @@ router.get('/urgent', getUrgentPosts);
 
 // GET /api/posts/stats - Get statistics
 router.get('/stats', getStats);
+
+// GET /api/posts/twitter - Fetch posts from Twitter API
+router.get('/twitter', fetchTwitterPosts);
 
 module.exports = router;

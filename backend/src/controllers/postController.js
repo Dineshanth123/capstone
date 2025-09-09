@@ -1,6 +1,9 @@
 // src/controllers/postController.js
+const { fetchTweetsAndSave } = require("../services/twitterService");
+
 const Post = require("../models/Post");
 const { extractDetails } = require("../services/extractors");
+const axios = require("axios");
 
 // Get all posts
 const getPosts = async (req, res) => {
@@ -20,6 +23,55 @@ const createPost = async (req, res) => {
     res.status(201).json(post);
   } catch (err) {
     res.status(400).json({ message: "Error creating post", error: err.message });
+  }
+};
+
+// Fetch posts from Twitter API
+const fetchTwitterPosts = async (req, res) => {
+  try {
+      let query = req.query.query || "news";
+      query = encodeURIComponent(query); // encode spaces and special chars
+      const max_results = Math.min(Math.max(parseInt(req.query.limit) || 10, 10), 100); // enforce 10-100
+
+      const response = await axios.get(
+        "https://api.twitter.com/2/tweets/search/recent",
+        {
+          params: {
+            query,
+            max_results,
+            "tweet.fields": "author_id,created_at",
+          },
+          headers: {
+            Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
+          },
+        }
+      );
+
+      const tweets = response.data.data || [];
+
+      if (!tweets.length) {
+        return res.json({ message: "No tweets found for this query", tweets: [] });
+      }
+
+    const posts = await Post.insertMany(
+      tweets.map((t) => ({
+        rawText: t.text,
+        source: {
+          platform: "Twitter",
+          postId: t.id,
+          author: t.author_id,
+          url: `https://twitter.com/i/web/status/${t.id}`,
+        },
+        classification: {},
+        processingStatus: "Pending",
+      })),
+      { ordered: false }
+    );
+
+    res.json(posts);
+  } catch (err) {
+    console.error("Twitter fetch error:", err.response?.data || err.message);
+    res.status(500).json({ message: "Error fetching from Twitter", error: err.message });
   }
 };
 
@@ -78,5 +130,6 @@ module.exports = {
   createPost,
   processPost,
   getUrgentPosts,
-  getStats
+  getStats,
+  fetchTwitterPosts
 };
