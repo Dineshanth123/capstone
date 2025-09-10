@@ -1,4 +1,3 @@
-const { fetchTweetsAndSave } = require("../services/twitterService");
 const Post = require("../models/Post");
 const { extractDetails } = require("../services/extractors");
 const axios = require("axios");
