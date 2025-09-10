@@ -1,6 +1,5 @@
 // src/controllers/postController.js
 const { fetchTweetsAndSave } = require("../services/twitterService");
-
 const Post = require("../models/Post");
 const { extractDetails } = require("../services/extractors");
 const axios = require("axios");
@@ -12,6 +11,17 @@ const getPosts = async (req, res) => {
     res.json(posts);
   } catch (err) {
     res.status(500).json({ message: "Error fetching posts", error: err.message });
+  }
+};
+
+// DELETE /api/posts/twitter
+const deleteTwitterPosts = async (req, res) => {
+  try {
+    const result = await Post.deleteMany({ "source.platform": "Twitter" });
+    res.json({ message: "Deleted Twitter posts", deletedCount: result.deletedCount });
+  } catch (err) {
+    console.error("Error deleting Twitter posts:", err.message);
+    res.status(500).json({ message: "Error deleting posts", error: err.message });
   }
 };
 
@@ -29,29 +39,29 @@ const createPost = async (req, res) => {
 // Fetch posts from Twitter API
 const fetchTwitterPosts = async (req, res) => {
   try {
-      let query = req.query.query || "news";
-      query = encodeURIComponent(query); // encode spaces and special chars
-      const max_results = Math.min(Math.max(parseInt(req.query.limit) || 10, 10), 100); // enforce 10-100
+    let query = req.query.query || "news";
+    query = `${query} lang:en`; 
+    const max_results = Math.min(Math.max(parseInt(req.query.limit) || 10, 10), 100); // enforce 10-100
 
-      const response = await axios.get(
-        "https://api.twitter.com/2/tweets/search/recent",
-        {
-          params: {
-            query,
-            max_results,
-            "tweet.fields": "author_id,created_at",
-          },
-          headers: {
-            Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
-          },
-        }
-      );
-
-      const tweets = response.data.data || [];
-
-      if (!tweets.length) {
-        return res.json({ message: "No tweets found for this query", tweets: [] });
+    const response = await axios.get(
+      "https://api.twitter.com/2/tweets/search/recent",
+      {
+        params: {
+          query,
+          max_results,
+          "tweet.fields": "author_id,created_at",
+        },
+        headers: {
+          Authorization: `Bearer ${process.env.TWITTER_BEARER_TOKEN}`,
+        },
       }
+    );
+
+    const tweets = response.data.data || [];
+
+    if (!tweets.length) {
+      return res.json({ message: "No tweets found for this query", tweets: [] });
+    }
 
     const posts = await Post.insertMany(
       tweets.map((t) => ({
@@ -75,7 +85,7 @@ const fetchTwitterPosts = async (req, res) => {
   }
 };
 
-// Process a post (NLP)
+// Process a single post (NLP)
 const processPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -104,6 +114,41 @@ const processPost = async (req, res) => {
   }
 };
 
+// NEW: Process all pending posts
+const processAllPosts = async (req, res) => {
+  try {
+    const posts = await Post.find({ processingStatus: "Pending" });
+
+    await Promise.all(posts.map(async (post) => {
+      try {
+        const extracted = await extractDetails(post.rawText);
+        post.processedText = post.rawText;
+        post.classification = extracted.classification;
+        post.extractedDetails = {
+          names: extracted.names,
+          contacts: extracted.contacts,
+          locations: extracted.locations,
+          helpType: extracted.helpType,
+          timestamps: extracted.timestamps,
+          quantities: extracted.quantities,
+          rawNlpResponse: extracted.rawNlpResponse
+        };
+        post.processingStatus = "Completed";
+        await post.save();
+      } catch (error) {
+        post.processingErrors.push(error.message);
+        post.processingStatus = "Error";
+        await post.save();
+      }
+    }));
+
+    res.json({ message: `${posts.length} posts processed successfully` });
+  } catch (err) {
+    console.error("Process all posts error:", err.message);
+    res.status(500).json({ message: "Error processing all posts", error: err.message });
+  }
+};
+
 // Get urgent posts
 const getUrgentPosts = async (req, res) => {
   try {
@@ -129,7 +174,9 @@ module.exports = {
   getPosts,
   createPost,
   processPost,
+  processAllPosts, // <-- exported here
   getUrgentPosts,
   getStats,
-  fetchTwitterPosts
+  fetchTwitterPosts,
+  deleteTwitterPosts
 };

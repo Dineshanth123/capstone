@@ -11,6 +11,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.use((req, res, next) => {
+  // Remove URL-encoded newlines and other whitespace characters
+  req.url = req.url.replace(/%0A/g, '').replace(/%0D/g, '').trim();
+  console.log('Cleaned URL:', req.url); // For debugging
+  next();
+});
+
 // ================== Routes ==================
 app.use("/api/posts", postRoutes);
 
