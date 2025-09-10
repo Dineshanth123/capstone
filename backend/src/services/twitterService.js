@@ -1,12 +1,8 @@
-// src/services/twitterService.js
 const { TwitterApi } = require("twitter-api-v2");
 const Post = require("../models/Post");
 const { extractDetails } = require("./extractors");
 
-// Initialize Twitter client (make sure TWITTER_BEARER_TOKEN is set in .env)
 const twitterClient = new TwitterApi(process.env.TWITTER_BEARER_TOKEN);
-
-// Fetch tweets and save them in DB
 async function fetchTweetsAndSave(query = "help OR urgent OR rescue", maxResults = 10) {
   try {
     const response = await twitterClient.v2.search(query, {
@@ -18,11 +14,8 @@ async function fetchTweetsAndSave(query = "help OR urgent OR rescue", maxResults
     const savedPosts = [];
 
     for (const tweet of tweets) {
-      // Skip if already exists
       const exists = await Post.findOne({ "source.postId": tweet.id });
       if (exists) continue;
-
-      // Create new Post
       const post = new Post({
         rawText: tweet.text,
         source: {
@@ -34,7 +27,6 @@ async function fetchTweetsAndSave(query = "help OR urgent OR rescue", maxResults
         processingStatus: "Processing",
       });
 
-      // Run extractor immediately (auto-processing)
       try {
         const extracted = await extractDetails(post.rawText);
 

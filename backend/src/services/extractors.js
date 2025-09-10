@@ -1,15 +1,12 @@
-// src/services/extractor.js
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// --- Helper: clean JSON text ---
 function cleanJsonResponse(text) {
   if (!text) return "{}";
   return text.replace(/```json/gi, "").replace(/```/g, "").trim();
 }
 
-// --- Regex fallback extractors ---
 function regexFallback(text) {
   const phoneRegex = /(\+?\d{1,3}[-.\s]?)?\d{10}/g;
   const emailRegex = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -43,7 +40,6 @@ function regexFallback(text) {
   };
 }
 
-// --- Main Extractor with Gemini ---
 async function extractDetails(text) {
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });

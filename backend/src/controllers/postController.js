@@ -1,10 +1,8 @@
-// src/controllers/postController.js
 const { fetchTweetsAndSave } = require("../services/twitterService");
 const Post = require("../models/Post");
 const { extractDetails } = require("../services/extractors");
 const axios = require("axios");
 
-// Get all posts
 const getPosts = async (req, res) => {
   try {
     const posts = await Post.find();
@@ -14,7 +12,6 @@ const getPosts = async (req, res) => {
   }
 };
 
-// DELETE /api/posts/twitter
 const deleteTwitterPosts = async (req, res) => {
   try {
     const result = await Post.deleteMany({ "source.platform": "Twitter" });
@@ -25,7 +22,6 @@ const deleteTwitterPosts = async (req, res) => {
   }
 };
 
-// Create new post
 const createPost = async (req, res) => {
   try {
     const post = new Post(req.body);
@@ -36,12 +32,11 @@ const createPost = async (req, res) => {
   }
 };
 
-// Fetch posts from Twitter API
 const fetchTwitterPosts = async (req, res) => {
   try {
     let query = req.query.query || "news";
     query = `${query} lang:en`; 
-    const max_results = Math.min(Math.max(parseInt(req.query.limit) || 10, 10), 100); // enforce 10-100
+    const max_results = Math.min(Math.max(parseInt(req.query.limit) || 10, 10), 100); 
 
     const response = await axios.get(
       "https://api.twitter.com/2/tweets/search/recent",
@@ -85,7 +80,6 @@ const fetchTwitterPosts = async (req, res) => {
   }
 };
 
-// Process a single post (NLP)
 const processPost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -93,7 +87,7 @@ const processPost = async (req, res) => {
 
     const extracted = await extractDetails(post.rawText);
 
-    post.processedText = post.rawText; // you could normalize text if needed
+    post.processedText = post.rawText; 
     post.classification = extracted.classification;
     post.extractedDetails = {
       names: extracted.names,
@@ -114,7 +108,6 @@ const processPost = async (req, res) => {
   }
 };
 
-// NEW: Process all pending posts
 const processAllPosts = async (req, res) => {
   try {
     const posts = await Post.find({ processingStatus: "Pending" });
@@ -149,7 +142,6 @@ const processAllPosts = async (req, res) => {
   }
 };
 
-// Get urgent posts
 const getUrgentPosts = async (req, res) => {
   try {
     const posts = await Post.find({ "classification.urgency": "High" });
@@ -159,7 +151,7 @@ const getUrgentPosts = async (req, res) => {
   }
 };
 
-// Get statistics
+
 const getStats = async (req, res) => {
   try {
     const total = await Post.countDocuments();
@@ -174,7 +166,7 @@ module.exports = {
   getPosts,
   createPost,
   processPost,
-  processAllPosts, // <-- exported here
+  processAllPosts, 
   getUrgentPosts,
   getStats,
   fetchTwitterPosts,

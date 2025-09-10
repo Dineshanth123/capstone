@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// ====================== Contact Schema ======================
 const ContactSchema = new mongoose.Schema({
   phones: [{
     type: String,
@@ -13,7 +12,6 @@ const ContactSchema = new mongoose.Schema({
   }]
 }, { _id: false });
 
-// ====================== Classification Schema ======================
 const ClassificationSchema = new mongoose.Schema({
   isHelpRequest: {
     type: Boolean,
@@ -38,16 +36,15 @@ const ClassificationSchema = new mongoose.Schema({
   }]
 }, { _id: false });
 
-// ====================== Extracted Details Schema ======================
 const ExtractedDetailsSchema = new mongoose.Schema({
   names: [{
     type: String,
     trim: true,
-    default: [] // ensures array even if empty
+    default: [] 
   }],
   contacts: {
     type: ContactSchema,
-    default: () => ({ phones: [], emails: [] }) // always defaults to arrays
+    default: () => ({ phones: [], emails: [] }) 
   },
   locations: [{
     name: { type: String, trim: true },
@@ -74,7 +71,6 @@ const ExtractedDetailsSchema = new mongoose.Schema({
   rawNlpResponse: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { _id: false });
 
-// ====================== Main Post Schema ======================
 const PostSchema = new mongoose.Schema({
   rawText: {
     type: String,
@@ -124,7 +120,6 @@ const PostSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// ====================== Indexes ======================
 PostSchema.index({ createdAt: -1 });
 PostSchema.index({ 'classification.urgency': 1 });
 PostSchema.index({ 'classification.isHelpRequest': 1 });
@@ -132,19 +127,16 @@ PostSchema.index({ 'processingStatus': 1 });
 PostSchema.index({ 'source.platform': 1 });
 PostSchema.index({ 'rawText': 'text', 'processedText': 'text' });
 
-// ====================== Virtuals ======================
 PostSchema.virtual('isHighPriority').get(function() {
   return this.classification.urgency === 'High' && this.classification.isHelpRequest;
 });
 
-// ====================== Middleware ======================
 PostSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   this.version += 1;
   next();
 });
 
-// ====================== Static Methods ======================
 PostSchema.statics.findHighPriority = function() {
   return this.find({
     'classification.isHelpRequest': true,
@@ -156,7 +148,6 @@ PostSchema.statics.findByStatus = function(status) {
   return this.find({ processingStatus: status });
 };
 
-// ====================== Instance Methods ======================
 PostSchema.methods.markAsProcessed = function() {
   this.processingStatus = 'Completed';
   return this.save();
@@ -168,6 +159,5 @@ PostSchema.methods.addProcessingError = function(stage, message) {
   return this.save();
 };
 
-// ====================== Export ======================
 const Post = mongoose.model('Post', PostSchema);
 module.exports = Post;
