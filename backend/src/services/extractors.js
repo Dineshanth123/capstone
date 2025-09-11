@@ -1,5 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+const Tesseract = require("tesseract.js");
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 function cleanJsonResponse(text) {
@@ -84,6 +85,18 @@ async function extractDetails(text) {
   }
 }
 
+async function extractTextFromImage(imagePath) {
+  try {
+    const { data: { text } } = await Tesseract.recognize(imagePath, "eng");
+    return text;
+  } catch (err) {
+    console.error("OCR extraction failed:", err.message);
+    throw err;
+  }
+}
+
+
 module.exports = {
-  extractDetails
+  extractDetails,
+  extractTextFromImage
 };
