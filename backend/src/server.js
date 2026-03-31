@@ -1,16 +1,15 @@
-const express = require("express");
-const connectDB = require("./config/db");
 require("dotenv").config();
+const app = require("./app");
+const connectDB = require("./config/db");
 
-const app = express();
 const PORT = process.env.PORT || 5000;
+
+if (!process.env.GEMINI_API_KEY) {
+  console.warn(" GEMINI_API_KEY is missing! Check your .env file.");
+}
 
 connectDB();
 
-app.get("/", (req, res) => {
-  res.send("✅ Server is running & MongoDB is connected (check console)");
-});
-
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

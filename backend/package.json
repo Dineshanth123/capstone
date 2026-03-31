@@ -4,11 +4,21 @@
   "main": "src/server.js",
   "type": "commonjs",
   "dependencies": {
+    "@google/genai": "^1.27.0",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "mongoose": "^8.18.0"
+    "leaflet": "^1.9.4",
+    "mongoose": "^8.18.0",
+    "multer": "^2.0.2",
+    "node-geocoder": "^4.4.1",
+    "nodemailer": "^7.0.12",
+    "react-leaflet": "^5.0.0",
+    "tesseract.js": "^6.0.1",
+    "twilio": "^5.11.2",
+    "twitter-api-v2": "^1.27.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
