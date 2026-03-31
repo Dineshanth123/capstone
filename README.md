@@ -197,9 +197,4 @@ All endpoints are prefixed with `/api`.
 
 ---
 
-## Notes
 
-- For production, you should:
-  - Use secure environment variable management and stronger credentials.
-  - Replace hardcoded URLs and ports with configuration.
-  - Add authentication/authorization before exposing the dashboard externally.
