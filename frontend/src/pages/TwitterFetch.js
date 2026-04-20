@@ -190,7 +190,7 @@ const TwitterFetch = () => {
             No tweets fetched yet
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Enter a search query and click "Fetch Tweets" to get started
+            Enter an search query and click "Fetch Tweets" to get started
           </Typography>
         </Box>
       )}
