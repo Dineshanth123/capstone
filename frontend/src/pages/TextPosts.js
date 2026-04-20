@@ -114,7 +114,7 @@ const TextPosts = () => {
   };
 
   const handleDeleteAll = async () => {
-    if (window.confirm("Are you sure you want to delete all text posts?")) {
+    if (window.confirm("Are you sure that you want to delete all text posts?")) {
       try {
         setProcessing(true);
         await textPostsAPI.deleteAllPosts();
